@@ -45,9 +45,10 @@ class InferenNet(nn.Module):
     def __init__(self, kernel_size, dataset):
         super(InferenNet, self).__init__()
 
-        model = createModel_Inference().cuda()
+        model = createModel_Inference().cpu()
         print('Loading Model from {}'.format('./models/sppe/pyra_4.pth'))
-        model.load_state_dict(torch.load('./models/sppe/pyra_4.pth'))
+        model.load_state_dict(torch.load('./models/sppe/pyra_4.pth',
+                                         map_location='cpu'))
         model.eval()
         self.pyranet = model
         self.gaussian = nn.Conv2d(17, 17, kernel_size=kernel_size,
@@ -65,11 +66,13 @@ class InferenNet(nn.Module):
         out = self.pyranet(x)
         out = out.narrow(1, 0, 17)
 
-        flip_out = self.pyranet(flip_v(x))
+        # disable cuda option
+        flip_out = self.pyranet(flip_v(x, False))
         flip_out = flip_out.narrow(1, 0, 17)
 
-        flip_out = flip_v(shuffleLR(
-            flip_out, self.dataset))
+        # disable cuda option
+        flip_out = flip_v(shuffleLR(flip_out, self.dataset),
+                          False)
 
         out = (flip_out + out) / 2
         out = self.gaussian(F.relu(out, inplace=True))

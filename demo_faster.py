@@ -30,8 +30,11 @@ if __name__ == "__main__":
 
     # Load SSD model
     print('Loading SSD model..')
-    det_model = FPNSSD512(num_classes=21).cuda()
-    det_model.load_state_dict(torch.load('./models/ssd/fpnssd512_20_trained.pth'))
+    det_model = FPNSSD512(num_classes=21).cpu()
+    det_model.load_state_dict(
+        torch.load('./models/ssd/fpnssd512_20_trained.pth',
+                   map_location='cpu'))
+
     det_model.eval()
     box_coder = SSDBoxCoder(det_model)
 
@@ -59,10 +62,12 @@ if __name__ == "__main__":
         pose_model = InferenNet_faster(4 * 1 + 1, pose_dataset)
     else:
         pose_model = InferenNet(4 * 1 + 1, pose_dataset)
-    #pose_model = torch.nn.DataParallel(pose_model).cuda()
-    pose_model.cuda()
+    #pose_model = torch.nn.DataParallel(pose_model).cpu()
+    pose_model.cpu()
     pose_model.eval()
-    pose_model.half()
+    # cannot run
+    #pose_model.half()
+
     final_result = []
 
     for i, (img, inp, im_name) in enumerate(im_names_desc):
@@ -71,9 +76,9 @@ if __name__ == "__main__":
             ht = inp.size(2)
             wd = inp.size(3)
             # Human Detection
-            img = Variable(img, volatile=True).cuda()
+            img = Variable(img, volatile=True).cpu()
             loc_preds, cls_preds = det_model(img)
-            boxes, labels, scores = box_coder.decode(ht, wd,
+            boxes, labels, scores = box_coder.decode(#ht, wd,
                 loc_preds.data.squeeze().cpu(), F.softmax(cls_preds.squeeze(), dim=1).data.cpu())
 
             if boxes.shape[0] == 0:
@@ -81,8 +86,12 @@ if __name__ == "__main__":
             assert boxes.shape[0] == scores.shape[0]
             # Pose Estimation
             inps, pt1, pt2 = crop_from_dets(inp[0], boxes, scores)
-            inps = Variable(inps.cuda().half(), volatile=True)
+
+            # thnn_conv2d_forward is not implemented for type torch.HalfTensor
+            # inps = Variable(inps.cpu().half(), volatile=True)
+            inps = Variable(inps.cpu(), volatile=True)
             det_time = time.time() - start_time
+            # Expected object of type torch.FloatTensor but found type torch.HalfTensor for argument #2 'weight'
             hm = pose_model(inps).float()
 
             # n*kp*2 | n*kp*1

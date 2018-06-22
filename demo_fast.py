@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     # Load SSD model
     print('Loading SSD model..')
-    det_model = FPNSSD512(num_classes=81).cuda()
+    det_model = FPNSSD512(num_classes=81).cpu()
     det_model.load_state_dict(torch.load(
         './models/ssd/ssd_coco.pth'))
     det_model.eval()
@@ -57,8 +57,8 @@ if __name__ == "__main__":
 
     pose_dataset = Mscoco()
     pose_model = InferenNet(4 * 1 + 1, pose_dataset)
-    #pose_model = torch.nn.DataParallel(pose_model).cuda()
-    pose_model.cuda()
+    #pose_model = torch.nn.DataParallel(pose_model).cpu()
+    pose_model.cpu()
     pose_model.eval()
     pose_model.half()
 
@@ -70,7 +70,7 @@ if __name__ == "__main__":
             ht = inp.size(2)
             wd = inp.size(3)
             # Human Detection
-            img = Variable(img).cuda()
+            img = Variable(img).cpu()
             loc_preds, cls_preds = det_model(img)
 
             boxes, labels, scores = box_coder.decode(ht, wd,
@@ -81,7 +81,7 @@ if __name__ == "__main__":
             assert boxes.shape[0] == scores.shape[0]
             # Pose Estimation
             inps, pt1, pt2 = crop_from_dets(inp[0], boxes, scores)
-            inps = Variable(inps.half().cuda())
+            inps = Variable(inps.half().cpu())
 
             hm = pose_model(inps)
 

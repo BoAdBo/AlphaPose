@@ -114,7 +114,7 @@ class SSDBoxCoder:
         labels = []
         scores = []
         num_classes = cls_preds.size(1)
-        cls_ind = 0    # class of human
+        cls_ind = 14    # class of human
         for i in range(num_classes-1):
             if i != cls_ind:
                 continue
@@ -129,6 +129,7 @@ class SSDBoxCoder:
             boxes.append(box[keep])
             labels.append(torch.LongTensor(len(box[keep])).fill_(i))
             scores.append(score[keep])
+        print(boxes)
 
         boxes = torch.cat(boxes, 0)
         labels = torch.cat(labels, 0)
