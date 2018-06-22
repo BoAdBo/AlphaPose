@@ -14,6 +14,8 @@ import time
 
 from ssd.torchcv.models.fpnssd import FPNSSD512
 from ssd.torchcv.models.ssd import SSD512, SSDBoxCoder
+# import visualization utilities
+from ssd.torchcv.visualizations import vis_image
 from pPose_nms import pose_nms, write_json
 
 from opt import opt
@@ -73,16 +75,32 @@ if __name__ == "__main__":
     for i, (img, inp, im_name) in enumerate(im_names_desc):
         start_time = time.time()
         with torch.no_grad():
-            ht = inp.size(2)
-            wd = inp.size(3)
+            #ht = inp.size(2)
+            #wd = inp.size(3)
             # Human Detection
             img = Variable(img, volatile=True).cpu()
             loc_preds, cls_preds = det_model(img)
+            #print(img.size())
+
+            # some exception handling for not finding a person in image
+            # pytorch cat() would compian: RuntimeError: expected a non-empty list of Tensors
+
+            # the ht, wd of the function is removed, yet passing in these two,
+            # inducing troubles
             boxes, labels, scores = box_coder.decode(#ht, wd,
                 loc_preds.data.squeeze().cpu(), F.softmax(cls_preds.squeeze(), dim=1).data.cpu())
 
-            if boxes.shape[0] == 0:
+            # label in tensor, so no way to visualize it
+            #print(labels)
+            # visualize it
+            vis_image(img[0], boxes, label_names=None, scores=scores)
+
+            if len(boxes) == 0:
                 continue
+            # if no boxes is detected, return None
+            # if boxes.shape[0] == 0:
+            #     continue
+
             assert boxes.shape[0] == scores.shape[0]
             # Pose Estimation
             inps, pt1, pt2 = crop_from_dets(inp[0], boxes, scores)

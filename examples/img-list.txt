@@ -1,2 +1,2 @@
-/home/king-kong/my-repo/myAlphaPose/examples/demo/1.jpg
-/home/king-kong/my-repo/myAlphaPose/examples/demo/2.jpg
+myAlphaPose/examples/demo/1.jpg
+myAlphaPose/examples/demo/2.jpg

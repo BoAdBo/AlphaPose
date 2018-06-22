@@ -99,6 +99,17 @@ def box_nms(bboxes, scores, threshold=0.5):
     Reference:
       https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/nms/py_cpu_nms.py
     '''
+
+    # exception would happen if bboxes have only one candidate
+    # x1 = x2 = y1 = y2 = None
+    # print(bboxes)
+
+    # if len(bboxes.size()) == 1:
+    #     x1 = bboxes[0]
+    #     y1 = bboxes[1]
+    #     x2 = bboxes[2]
+    #     y2 = bboxes[3]
+    # else:
     x1 = bboxes[:,0]
     y1 = bboxes[:,1]
     x2 = bboxes[:,2]
@@ -129,4 +140,5 @@ def box_nms(bboxes, scores, threshold=0.5):
         if ids.numel() == 0:
             break
         order = order[ids+1]
+    #print(keep)
     return torch.tensor(keep, dtype=torch.long)

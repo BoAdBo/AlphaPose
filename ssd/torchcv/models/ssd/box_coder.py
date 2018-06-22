@@ -122,16 +122,25 @@ class SSDBoxCoder:
             mask = score > score_thresh
             if not mask.any():
                 continue
-            box = box_preds[mask.nonzero().squeeze()]
+            # print(box_preds)
+            # print(mask.size())
+            # print(mask.nonzero().squeeze())
+            #print('up')
+            # if only a single box is generated
+            #box = box_preds[mask.nonzero().squeeze()]
+            box = torch.index_select(box_preds, 0, mask.nonzero().squeeze())
             score = score[mask]
 
             keep = box_nms(box, score, nms_thresh)
             boxes.append(box[keep])
             labels.append(torch.LongTensor(len(box[keep])).fill_(i))
             scores.append(score[keep])
-        print(boxes)
+        #print(boxes)
 
-        boxes = torch.cat(boxes, 0)
-        labels = torch.cat(labels, 0)
-        scores = torch.cat(scores, 0)
+        # would throw error trying to concat list and tensor
+        if len(boxes) > 0:
+            boxes = torch.cat(boxes, 0)
+            labels = torch.cat(labels, 0)
+            scores = torch.cat(scores, 0)
+
         return boxes, labels, scores
