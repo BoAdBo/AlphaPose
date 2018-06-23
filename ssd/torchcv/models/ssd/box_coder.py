@@ -92,7 +92,7 @@ class SSDBoxCoder:
         cls_targets[index<0] = 0
         return loc_targets, cls_targets
 
-    def decode(self, loc_preds, cls_preds, score_thresh=0.6, nms_thresh=0.45):
+    def decode(self, ht, wd, loc_preds, cls_preds, score_thresh=0.6, nms_thresh=0.45):
         '''Decode predicted loc/cls back to real box locations and class labels.
 
         Args:
@@ -109,6 +109,12 @@ class SSDBoxCoder:
         xy = loc_preds[:,:2] * variances[0] * self.default_boxes[:,2:] + self.default_boxes[:,:2]
         wh = torch.exp(loc_preds[:,2:]*variances[1]) * self.default_boxes[:,2:]
         box_preds = torch.cat([xy-wh/2, xy+wh/2], 1)
+
+        # refine the box cor
+        box_preds[:, 0].mul_(wd).div_(512).clamp_(0, wd)
+        box_preds[:, 2].mul_(wd).div_(512).clamp_(0, wd)
+        box_preds[:, 1].mul_(ht).div_(512).clamp_(0, ht)
+        box_preds[:, 3].mul_(ht).div_(512).clamp_(0, ht)
 
         boxes = []
         labels = []

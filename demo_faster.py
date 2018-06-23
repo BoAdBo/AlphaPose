@@ -8,11 +8,14 @@ import torch.utils.data
 from dataloader import Image_loader, crop_from_dets, Mscoco
 from SPPE.src.main_fast_inference import *
 from SPPE.src.utils.eval import getPrediction
+#from SPPE.src.utils.img import drawCOCO
+# implementation on drawCOCO
+from visualize.visual import drawCOCO
 import os
 from tqdm import tqdm
 import time
 
-from ssd.torchcv.models.fpnssd import FPNSSD512
+from ssd.torchcv.models.fpnssd import FPNSSD512, FPNSSDBoxCoder
 from ssd.torchcv.models.ssd import SSD512, SSDBoxCoder
 # import visualization utilities
 from ssd.torchcv.visualizations import vis_image
@@ -39,6 +42,9 @@ if __name__ == "__main__":
 
     det_model.eval()
     box_coder = SSDBoxCoder(det_model)
+
+    # don't understand...
+    #box_coder = FPNSSDBoxCoder()
 
     print(inputpath)
     print(inputlist)
@@ -75,10 +81,12 @@ if __name__ == "__main__":
     for i, (img, inp, im_name) in enumerate(im_names_desc):
         start_time = time.time()
         with torch.no_grad():
-            #ht = inp.size(2)
-            #wd = inp.size(3)
+
+            # for resizing the bounding box
+            ht = inp.size(2)
+            wd = inp.size(3)
             # Human Detection
-            img = Variable(img, volatile=True).cpu()
+            img = Variable(img).cpu()
             loc_preds, cls_preds = det_model(img)
             #print(img.size())
 
@@ -87,13 +95,13 @@ if __name__ == "__main__":
 
             # the ht, wd of the function is removed, yet passing in these two,
             # inducing troubles
-            boxes, labels, scores = box_coder.decode(#ht, wd,
+            boxes, labels, scores = box_coder.decode(ht, wd,
                 loc_preds.data.squeeze().cpu(), F.softmax(cls_preds.squeeze(), dim=1).data.cpu())
 
             # label in tensor, so no way to visualize it
             #print(labels)
             # visualize it
-            vis_image(img[0], boxes, label_names=None, scores=scores)
+            #vis_image(np.transpose(img[0].data.numpy(), (1, 2, 0)), boxes, label_names=None, scores=scores)
 
             if len(boxes) == 0:
                 continue
@@ -102,12 +110,18 @@ if __name__ == "__main__":
             #     continue
 
             assert boxes.shape[0] == scores.shape[0]
+            # opt.inputResH = inp[0].size(1)
+            # opt.inputResW = inp[0].size(2)
+            # print(inp[0].size(1))
+            # print(inp[0].size(2))
+            # print(opt.inputResH)
+            # print(opt.inputResW)
             # Pose Estimation
             inps, pt1, pt2 = crop_from_dets(inp[0], boxes, scores)
 
             # thnn_conv2d_forward is not implemented for type torch.HalfTensor
             # inps = Variable(inps.cpu().half(), volatile=True)
-            inps = Variable(inps.cpu(), volatile=True)
+            inps = Variable(inps.cpu())
             det_time = time.time() - start_time
             # Expected object of type torch.FloatTensor but found type torch.HalfTensor for argument #2 'weight'
             hm = pose_model(inps).float()
@@ -116,8 +130,12 @@ if __name__ == "__main__":
             preds_hm, preds_img, preds_scores = getPrediction(
                 hm.cpu().data, pt1, pt2, opt.inputResH, opt.inputResW, opt.outputResH, opt.outputResW)
 
+            print(boxes)
             result = pose_nms(boxes, scores, preds_img, preds_scores)
-            # print(len(result))
+            print(result)
+
+            drawCOCO(np.transpose(inp[0].data.numpy(), (1, 2, 0)), result)
+
             result = {
                 'imgname': im_name[0],
                 'result': result

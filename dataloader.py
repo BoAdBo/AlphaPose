@@ -107,6 +107,10 @@ def crop_from_dets(img, boxes, scores):
         bottomRight[1] = max(
             min(imght - 1, bottomRight[1] + ht * scaleRate / 2), upLeft[1] + 5)
 
+        #print(upLeft, bottomRight)
+        #print(img.size())
+        #print(opt.inputResH)
+        #print(opt.inputResW)
         tmp_inp = cropBox(tmp_img, upLeft, bottomRight, opt.inputResH, opt.inputResW)
         inp.append(tmp_inp.unsqueeze(0))
         pt1.append(upLeft.unsqueeze(0))

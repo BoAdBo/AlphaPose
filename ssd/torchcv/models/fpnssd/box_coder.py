@@ -130,7 +130,9 @@ class FPNSSDBoxCoder:
           labels: (tensor) class labels, sized [#obj,].
         '''
         anchor_boxes = change_box_order(self.anchor_boxes, 'xyxy2xywh')
-        xy = loc_preds[:,:2] * anchor_boxes[:,2:] + anchor_boxes[:,:2]
+        print(loc_preds.size())
+        print(anchor_boxes.size())
+        xy = loc_preds[:,:2] * self.anchor_boxes[:,2:] + self.anchor_boxes[:,:2]
         wh = loc_preds[:,2:].exp() * anchor_boxes[:,2:]
         box_preds = torch.cat([xy-wh/2, xy+wh/2], 1)
 

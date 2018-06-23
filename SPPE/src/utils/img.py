@@ -221,10 +221,13 @@ def cropBox(img, ul, br, resH, resW):
     if img.dim() == 2:
         img = img[np.newaxis, :]
 
+    print(img)
     newDim = torch.IntTensor((img.size(0), int(lenH), int(lenW)))
     newImg = img[:, ul[1]:, ul[0]:].clone()
     # Crop and Padding
     size = torch.IntTensor((int(br[1] - ul[1]), int(br[0] - ul[0])))
+    print(size)
+    print(newImg.size())
 
     newImg = SpecialCrop(size, 1)(newImg)
     newImg = Pad(newDim)(newImg)
