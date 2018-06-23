@@ -8,6 +8,7 @@ import numpy as np
 
 
 ''' Constant Configuration '''
+# trained parameters
 delta1 = 1
 mu = 1.7
 delta2 = 2.65
@@ -43,8 +44,9 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
     pick = []
     merge_ids = []
     while(human_scores.shape[0] != 0):
-        # Pick the one with highest score
+        # Pick the one with highest score as reference
         pick_id = torch.argmax(human_scores)
+
         pick.append(human_ids[pick_id])
         # num_visPart = torch.sum(pose_scores[pick_id] > 0.2)
 
@@ -67,6 +69,8 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
         human_ids = np.delete(human_ids, delete_ids)
         human_scores = np.delete(human_scores, delete_ids, axis=0)
         bbox_scores = np.delete(bbox_scores, delete_ids, axis=0)
+    #print(human_ids)
+    print(pick)
 
     assert len(merge_ids) == len(pick)
     preds_pick = ori_pose_preds[pick]
@@ -94,7 +98,9 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
         ymax = max(merge_pose[:, 1])
         ymin = min(merge_pose[:, 1])
 
-        if (1.5 ** 2 * (xmax - xmin) * (ymax - ymin) < 40 * 40.5):
+        # if (1.5 ** 2 * (xmax - xmin) * (ymax - ymin) < 40 * 40.5):
+        #     continue
+        if (xmax - xmin) * (ymax - ymin) < 720.0:
             continue
 
         num_pick += 1
@@ -205,6 +211,18 @@ def write_json(all_results, outputpath):
             result['score'] = float(pro_scores)
 
             json_results.append(result)
+
+            # coco_part_names = ['Nose','LEye','REye','LEar','REar','LShoulder','RShoulder','LElbow','RElbow','LWrist','RWrist','LHip','RHip','LKnee','RKnee','LAnkle','RAnkle']
+            # colors = ['r', 'r', 'r', 'r', 'r', 'y', 'y', 'y', 'y', 'y', 'y', 'g', 'g', 'g','g','g','g']
+            # pairs = [[0,1],[0,2],[1,3],[2,4],[5,6],[5,7],[7,9],[6,8],[8,10],[11,12],[11,13],[13,15],[12,14],[14,16],[6,12],[5,11]]
+            # colors_skeleton = ['y', 'y', 'y', 'y', 'b', 'b', 'b', 'b', 'b', 'r', 'r', 'r', 'r', 'r','m','m']
+            # for idx_c, color in enumerate(colors):
+            #     plt.plot(np.clip(pose[idx_c,0],0,width),
+            #              np.clip(pose[idx_c,1],0,height),
+            #              marker='o', color=color, ms=4*np.mean(pose[idx_c,2]))
+            # for idx in range(len(colors_skeleton)):
+            #     plt.plot(np.clip(pose[pairs[idx],0],0,width),np.clip(pose[pairs[idx],1],0,height),'r-',
+            #              color=colors_skeleton[idx],linewidth=4*np.mean(pose[pairs[idx],2]), alpha=0.12*np.mean(pose[pairs[idx],2]))
 
     with open(os.path.join(outputpath, 'keypoint_result.json'), 'w') as json_file:
         json_file.write(json.dumps(json_results))

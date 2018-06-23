@@ -24,7 +24,7 @@ from pPose_nms import pose_nms, write_json
 from opt import opt
 args = opt
 args.dataset = 'coco'
-
+#torch.set_num_threads(12)
 
 if __name__ == "__main__":
     inputpath = args.inputpath
@@ -70,7 +70,8 @@ if __name__ == "__main__":
         pose_model = InferenNet_faster(4 * 1 + 1, pose_dataset)
     else:
         pose_model = InferenNet(4 * 1 + 1, pose_dataset)
-    #pose_model = torch.nn.DataParallel(pose_model).cpu()
+
+    pose_model = torch.nn.DataParallel(pose_model).cpu()
     pose_model.cpu()
     pose_model.eval()
     # cannot run
@@ -130,12 +131,13 @@ if __name__ == "__main__":
             preds_hm, preds_img, preds_scores = getPrediction(
                 hm.cpu().data, pt1, pt2, opt.inputResH, opt.inputResW, opt.outputResH, opt.outputResW)
 
-            print(boxes)
+            #print(boxes)
             result = pose_nms(boxes, scores, preds_img, preds_scores)
-            print(result)
+            #print(result)
 
             drawCOCO(np.transpose(inp[0].data.numpy(), (1, 2, 0)), result)
 
+            #print(result)
             result = {
                 'imgname': im_name[0],
                 'result': result
