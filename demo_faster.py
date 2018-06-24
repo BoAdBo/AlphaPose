@@ -70,7 +70,8 @@ if __name__ == "__main__":
     else:
         pose_model = InferenNet(4 * 1 + 1, pose_dataset)
 
-    pose_model = torch.nn.DataParallel(pose_model).cuda()
+    #pose_model = torch.nn.DataParallel(pose_model).cuda()
+    pose_model.cuda()
     #pose_model.cpu()
     pose_model.eval()
     # cannot run
@@ -96,7 +97,7 @@ if __name__ == "__main__":
             # the ht, wd of the function is removed, yet passing in these two,
             # inducing troubles
             boxes, labels, scores = box_coder.decode(ht, wd,
-                loc_preds.data.squeeze().cuda(), F.softmax(cls_preds.squeeze(), dim=1).data.cuda())
+                loc_preds.data.squeeze().cpu(), F.softmax(cls_preds.squeeze(), dim=1).data.cpu())
 
             # label in tensor, so no way to visualize it
             #print(labels)

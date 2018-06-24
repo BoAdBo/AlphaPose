@@ -238,7 +238,7 @@ def write_json(all_results, outputpath):
         for human in im_res['result']:
             keypoints = []
             result = {}
-            result['image_id'] = int(im_name.split('/')[-1].split('.')[0])
+            result['image_id'] = im_name.split('/')[-1]#int(im_name.split('/')[-1].split('.')[0])
             result['category_id'] = 1
 
             kp_preds = human['keypoints']

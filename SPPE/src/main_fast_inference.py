@@ -65,13 +65,13 @@ class InferenNet(nn.Module):
         out = self.pyranet(x)
         out = out.narrow(1, 0, 17)
 
-        # disable cuda option
-        flip_out = self.pyranet(flip_v(x, False))
+        # enable cuda option
+        flip_out = self.pyranet(flip_v(x, True))
         flip_out = flip_out.narrow(1, 0, 17)
 
-        # disable cuda option
+        # enable cuda option
         flip_out = flip_v(shuffleLR(flip_out, self.dataset),
-                          False)
+                          True)
 
         out = (flip_out + out) / 2
         out = self.gaussian(F.relu(out, inplace=True))
