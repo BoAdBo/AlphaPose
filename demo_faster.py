@@ -72,7 +72,7 @@ if __name__ == "__main__":
         pose_model = InferenNet(4 * 1 + 1, pose_dataset)
 
     pose_model = torch.nn.DataParallel(pose_model).cpu()
-    pose_model.cpu()
+    #pose_model.cpu()
     pose_model.eval()
     # cannot run
     #pose_model.half()
@@ -123,7 +123,9 @@ if __name__ == "__main__":
             # thnn_conv2d_forward is not implemented for type torch.HalfTensor
             # inps = Variable(inps.cpu().half(), volatile=True)
             inps = Variable(inps.cpu())
-            det_time = time.time() - start_time
+
+            # time for search the bbox
+            det_time1 = time.time() - start_time
             # Expected object of type torch.FloatTensor but found type torch.HalfTensor for argument #2 'weight'
             hm = pose_model(inps).float()
 
@@ -131,8 +133,16 @@ if __name__ == "__main__":
             preds_hm, preds_img, preds_scores = getPrediction(
                 hm.cpu().data, pt1, pt2, opt.inputResH, opt.inputResW, opt.outputResH, opt.outputResW)
 
+            # time for pose estimation
+            det_time2 = time.time() - start_time
+            # print('\n\n\n')
+            # print("for pose prediction: ", det_time2)
+
             #print(boxes)
             result = pose_nms(boxes, scores, preds_img, preds_scores)
+
+            # time for pose nms
+            det_time3 = time.time() - start_time
             #print(result)
 
             # vis_image(np.transpose(inp[0].data.numpy(), (1, 2, 0)),
@@ -147,10 +157,14 @@ if __name__ == "__main__":
 
         # TQDM
         im_names_desc.set_description(
-            'Speed: {total:.2f} FPS | Num Poses: {pose} | Det time: {det:.3f}'.format(
+            'Speed: {total:.2f} FPS | Num Poses: {pose} | Det time1, 2, 3: {det:.3f}, '.format(
                 total=1 / (time.time() - start_time),
                 pose=len(result['result']),
-                det=det_time)
+                det=det_time1)
+            +
+            '{det2:.3f}, {det3:.3f}'.format(
+                det2=det_time2 - det_time1,
+                det3=det_time3 - det_time2)
         )
 
     write_json(final_result, args.outputpath)
