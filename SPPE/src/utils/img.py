@@ -244,8 +244,7 @@ def flip_v(x, cuda=True, volatile=True):
     x = flip(x.cpu().data)
     if cuda:
         x = x.cuda(async=True)
-        print('nonono')
-    x = torch.autograd.Variable(x, volatile=volatile)
+    x = torch.autograd.Variable(x)
     return x
 
 

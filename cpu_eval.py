@@ -12,6 +12,7 @@ import os
 from tqdm import tqdm
 import time
 
+import numpy as np
 from ssd.torchcv.models.fpnssd import FPNSSD512, FPNSSDBoxCoder
 from ssd.torchcv.models.ssd import SSD512, SSDBoxCoder
 # import visualization utilities
@@ -34,6 +35,8 @@ def preprocess(image):
     img = image.resize((ow, oh))
     inp = torchvision.transforms.ToTensor()(image)
     img = transform(img)
+    img = img[np.newaxis]
+    inp = inp[np.newaxis]
 
     return img, inp
 
@@ -108,9 +111,11 @@ def inference_from_image(image):
         det_time3 = time.time() - start_time
         #print(result)
 
-        # vis_image(np.transpose(inp[0].data.numpy(), (1, 2, 0)),
-        #           [res['bbox'] for res in result])
-        #drawCOCO(np.transpose(inp[0].data.numpy(), (1, 2, 0)), result)
+        vis_image(np.transpose(inp[0].data.numpy(), (1, 2, 0)),
+                  [res['bbox'] for res in result])
+        drawCOCO(np.transpose(inp[0].data.numpy(), (1, 2, 0)), result)
+
+        print(result)
 
         result = {
             'result': result,

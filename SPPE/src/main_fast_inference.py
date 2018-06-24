@@ -60,6 +60,8 @@ class InferenNet(nn.Module):
         self.gaussian = nn.Conv2d(17, 17, kernel_size=kernel_size,
                                   stride=1, padding=2, groups=17, bias=False)
 
+        self.enable_cuda = cuda
+
         g = torch.from_numpy(gaussian(kernel_size)).clone()
         g = torch.unsqueeze(g, 1)
         g = g.repeat(17, 1, 1, 1)
@@ -72,15 +74,16 @@ class InferenNet(nn.Module):
         out = self.pyranet(x)
         out = out.narrow(1, 0, 17)
 
-        # enable cuda option
-        flip_out = self.pyranet(flip_v(x, True))
+        # enable cuda option or not
+        cuda = self.enable_cuda
+        flip_out = self.pyranet(flip_v(x, cuda))
         flip_out = flip_out.narrow(1, 0, 17)
 
-        # enable cuda option
+        # enable cuda option or not
         flip_out = flip_v(shuffleLR(flip_out, self.dataset),
-                          True)
+                          cuda)
 
         out = (flip_out + out) / 2
-        out = self.gaussian(F.relu(out, inplace=True))
+        out = self.gaussian(F.relu(out, inplace=cuda))
 
         return out
