@@ -151,8 +151,10 @@ if __name__ == "__main__":
 
             result = {
                 'imgname': im_name[0],
-                'result': result
+                'result': result,
+                'imgsize': (ht, wd)
             }
+            #print(result)
             final_result.append(result)
 
         # TQDM

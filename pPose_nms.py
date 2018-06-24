@@ -235,6 +235,8 @@ def write_json(all_results, outputpath):
     json_results = []
     for im_res in all_results:
         im_name = im_res['imgname']
+        # image height and width for normalization
+        height, width = im_res['imgsize']
         for human in im_res['result']:
             keypoints = []
             result = {}
@@ -253,6 +255,7 @@ def write_json(all_results, outputpath):
 
             # added
             result['bbox'] = [float(x) for x in human['bbox']]
+            result['imgsize'] = height, width
 
             json_results.append(result)
 
