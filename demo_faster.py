@@ -135,9 +135,10 @@ if __name__ == "__main__":
             result = pose_nms(boxes, scores, preds_img, preds_scores)
             #print(result)
 
-            drawCOCO(np.transpose(inp[0].data.numpy(), (1, 2, 0)), result)
+            # vis_image(np.transpose(inp[0].data.numpy(), (1, 2, 0)),
+            #           [res['bbox'] for res in result])
+            #drawCOCO(np.transpose(inp[0].data.numpy(), (1, 2, 0)), result)
 
-            #print(result)
             result = {
                 'imgname': im_name[0],
                 'result': result

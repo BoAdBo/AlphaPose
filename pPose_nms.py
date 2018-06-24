@@ -34,6 +34,8 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
 
     widths = xmax - xmin
     heights = ymax - ymin
+
+    # 1/10 of the Bounding box's dimension (larger of width or height)
     ref_dists = alpha * np.maximum(widths, heights)
 
     nsamples = bboxes.shape[0]
@@ -43,6 +45,9 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
     # Do pPose-NMS
     pick = []
     merge_ids = []
+
+    # Suspect that this is to arrange poses by similarity and matched keyposes
+    # for later merging
     while(human_scores.shape[0] != 0):
         # Pick the one with highest score as reference
         pick_id = torch.argmax(human_scores)
@@ -63,6 +68,7 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
         #else:
         #    delete_ids = torch.from_numpy(delete_ids)
 
+        #print(delete_ids)
         merge_ids.append(human_ids[delete_ids])
         pose_preds = np.delete(pose_preds, delete_ids, axis=0)
         pose_scores = np.delete(pose_scores, delete_ids, axis=0)
@@ -70,7 +76,8 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
         human_scores = np.delete(human_scores, delete_ids, axis=0)
         bbox_scores = np.delete(bbox_scores, delete_ids, axis=0)
     #print(human_ids)
-    print(pick)
+    #print(pick)
+    #print(merge_ids)
 
     assert len(merge_ids) == len(pick)
     preds_pick = ori_pose_preds[pick]
@@ -78,16 +85,46 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
     bbox_scores_pick = ori_bbox_scores[pick]
     num_pick = 0
 
+    # added bbox picking
+    bbox_pick = bboxes[pick]
+
     for j in range(len(pick)):
         ids = np.arange(17)
+        #print(scores_pick)
         max_score = torch.max(scores_pick[j, ids, 0])
+        #print(scores_pick[j, ids, 0])
 
+        # max score of each keypose under threshold cast it out
         if max_score < scoreThreds:
             continue
 
         # Merge poses
+        # could save some computation when two poses are the same,
+        # which is very likely
         merge_id = merge_ids[j]
-        merge_pose, merge_score = p_merge(preds_pick[j], ori_pose_preds[merge_id], ori_pose_scores[merge_id], ref_dists[pick[j]])
+
+        merge_pose, merge_score = None, None
+
+        merge_pose, merge_score = p_merge(preds_pick[j],
+                                          ori_pose_preds[merge_id],
+                                          ori_pose_scores[merge_id],
+                                          ref_dists[pick[j]])
+
+        # don't merge box... just add to result
+        merge_box = bbox_pick[j]
+
+        ## give up...
+        # # if merge id has only the already picked one, no need to merge
+        # if len(merge_id) > 1 and merge_id[0] != pick[j]:
+        #     pass
+        #     # merge_pose, merge_score = p_merge(preds_pick[j],
+        #     #                                   ori_pose_preds[merge_id],
+        #     #                                   ori_pose_scores[merge_id],
+        #     #                                   ref_dists[pick[j]])
+        # else:
+        #     merge_pose, merge_score = preds_pick[j], scores_pick[j]
+        #     print((preds_pick[j] == merge_pose).all())
+        #     print((merge_score[np.newaxis].t() == scores_pick[j]).all())
 
         max_score = torch.max(merge_score[ids])
         if max_score < scoreThreds:
@@ -103,9 +140,12 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
         if (xmax - xmin) * (ymax - ymin) < 720.0:
             continue
 
+        # bbox added
+        # bbox in the fashion of upper left, bottom right
         num_pick += 1
         final_result.append({
             'keypoints': merge_pose - 0.3,
+            'bbox': merge_box,
             'kp_score': merge_score,
             'proposal_score': torch.mean(merge_score) + bbox_scores_pick[j] + 1.25 * max(merge_score)
         })
@@ -150,6 +190,7 @@ def p_merge(ref_pose, cluster_preds, cluster_scores, ref_dist):
 
 
 def get_parametric_distance(i, all_preds, keypoint_scores, ref_dist):
+    # the reference keypoint
     pick_preds = all_preds[i]
     pred_scores = keypoint_scores[i]
     dist = torch.sqrt(torch.sum(
@@ -209,6 +250,9 @@ def write_json(all_results, outputpath):
                 keypoints.append(float(kp_scores[n]))
             result['keypoints'] = keypoints
             result['score'] = float(pro_scores)
+
+            # added
+            result['bbox'] = [float(x) for x in human['bbox']]
 
             json_results.append(result)
 
