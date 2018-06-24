@@ -35,10 +35,9 @@ if __name__ == "__main__":
 
     # Load SSD model
     print('Loading SSD model..')
-    det_model = FPNSSD512(num_classes=21).cpu()
+    det_model = FPNSSD512(num_classes=21).cuda()
     det_model.load_state_dict(
-        torch.load('./models/ssd/fpnssd512_20_trained.pth',
-                   map_location='cpu'))
+        torch.load('./models/ssd/fpnssd512_20_trained.pth'))
 
     det_model.eval()
     box_coder = SSDBoxCoder(det_model)
@@ -71,7 +70,7 @@ if __name__ == "__main__":
     else:
         pose_model = InferenNet(4 * 1 + 1, pose_dataset)
 
-    pose_model = torch.nn.DataParallel(pose_model).cpu()
+    pose_model = torch.nn.DataParallel(pose_model).cuda()
     #pose_model.cpu()
     pose_model.eval()
     # cannot run
@@ -87,7 +86,7 @@ if __name__ == "__main__":
             ht = inp.size(2)
             wd = inp.size(3)
             # Human Detection
-            img = Variable(img).cpu()
+            img = Variable(img).cuda()
             loc_preds, cls_preds = det_model(img)
             #print(img.size())
 
@@ -97,7 +96,7 @@ if __name__ == "__main__":
             # the ht, wd of the function is removed, yet passing in these two,
             # inducing troubles
             boxes, labels, scores = box_coder.decode(ht, wd,
-                loc_preds.data.squeeze().cpu(), F.softmax(cls_preds.squeeze(), dim=1).data.cpu())
+                loc_preds.data.squeeze().cuda(), F.softmax(cls_preds.squeeze(), dim=1).data.cuda())
 
             # label in tensor, so no way to visualize it
             #print(labels)
@@ -122,7 +121,7 @@ if __name__ == "__main__":
 
             # thnn_conv2d_forward is not implemented for type torch.HalfTensor
             # inps = Variable(inps.cpu().half(), volatile=True)
-            inps = Variable(inps.cpu())
+            inps = Variable(inps.cuda())
 
             # time for search the bbox
             det_time1 = time.time() - start_time
