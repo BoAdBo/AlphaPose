@@ -35,10 +35,11 @@ from opt import opt
 args = opt
 args.dataset = 'coco'
 
-class classifier():
+class Classifier():
     def __init__(self, cuda=False):
         ssd_path = './models/ssd/fpnssd512_20_trained.pth'
 
+        # load for cpu
         if not cuda:
             # Load SSD model
             print('Loading SSD model..')
@@ -48,16 +49,30 @@ class classifier():
                            map_location='cpu'))
 
             self.det_model.eval()
-            self.box_coder = SSDBoxCoder(det_model)
+            self.box_coder = SSDBoxCoder(self.det_model)
             pose_dataset = Mscoco()
             #pose_model = InferenNet_faster(4 * 1 + 1, pose_dataset)
             self.pose_model = InferenNet(4 * 1 + 1, pose_dataset, cuda=False)
 
             self.pose_model.cpu()
             self.pose_model.eval()
+        else:
+            print('Loading SSD model..')
+            self.det_model = FPNSSD512(num_classes=21).cuda()
+            self.det_model.load_state_dict(
+                torch.load('./models/ssd/fpnssd512_20_trained.pth'))
 
-    def preprocess(image):
-    # image of numpy in RGB mode
+            self.det_model.eval()
+            self.box_coder = SSDBoxCoder(self.det_model)
+            pose_dataset = Mscoco()
+            #pose_model = InferenNet_faster(4 * 1 + 1, pose_dataset)
+            self.pose_model = InferenNet(4 * 1 + 1, pose_dataset, cuda=True)
+
+            self.pose_model.cuda()
+            self.pose_model.eval()
+
+    def preprocess(self, image):
+        # image of numpy in RGB mode
 
         transform = torchvision.transforms.Compose([
             torchvision.transforms.ToTensor(),
@@ -73,8 +88,44 @@ class classifier():
 
         return img, inp
 
-    def predict(image):
-        img, inp = preprocess(image)
+    def svm_predict(self, keyposes, scores, bboxes):
+        # normalize to within bbox
+        assert(len(bboxes) == len(keyposes))
+        xmin, ymin, xmax, ymax = bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 3]
+
+        # list of width and height
+        widths = xmax - xmin
+        heights = ymax - ymin
+
+        feature_list = list()
+
+        for i in range(len(keyposes)):
+            width = widths[i]
+            height = heights[i]
+
+            feature = np.array([])
+
+            # normalize it
+            for j in range(scores[i].shape[0]):
+                feature = np.append(feature, (keyposes[i][j][0] - xmin[i]) / width)
+                feature = np.append(feature, (keyposes[i][j][1] - ymin[i]) / height)
+                feature = np.append(feature, scores[i][j])
+
+            feature_list.append(feature)
+
+        feature_list = np.array(feature_list)
+
+        from sklearn.externals import joblib
+        clf = joblib.load('./models/svm/keypoint_recall.pkl')
+
+        rep = clf.predict_proba(feature_list)
+
+        return rep
+        #print(rep)
+
+
+    def predict(self, image):
+        img, inp = self.preprocess(image)
         start_time = time.time()
 
         with torch.no_grad():
@@ -118,77 +169,50 @@ class classifier():
 
             # time for pose estimation
             det_time2 = time.time() - start_time
-            # print('\n\n\n')
-            # print("for pose prediction: ", det_time2)
 
-            #print(boxes)
             result = pose_nms(boxes, scores, preds_img, preds_scores)
 
             # time for pose nms
             det_time3 = time.time() - start_time
-            #print(result)
 
-            vis_image(np.transpose(inp[0].data.numpy(), (1, 2, 0)),
-                      [res['bbox'] for res in result])
-            drawCOCO(np.transpose(inp[0].data.numpy(), (1, 2, 0)), result)
-
-            #print(result)
+            # visualization
+            # vis_image(np.transpose(inp[0].data.numpy(), (1, 2, 0)),
+            #           [res['bbox'] for res in result])
+            # drawCOCO(np.transpose(inp[0].data.numpy(), (1, 2, 0)), result)
 
             result = {
                 'result': result,
                 'imgsize': (ht, wd)
             }
-            #print(result)
-            #final_result.append(result)
 
-            # convert to numpy
+            # convert result to numpy
             # some redundant dimension
             keyposes = [np.squeeze(x['keypoints'].numpy()) for x in result['result']]
             scores = [x['kp_score'].numpy() for x in result['result']]
-
-            # normalize to within bbox
             bboxes = np.array([x['bbox'].numpy() for x in result['result']])
-            assert(len(bboxes) == len(keyposes))
-            xmin, ymin, xmax, ymax = bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 3]
 
-            # list of width and height
-            widths = xmax - xmin
-            heights = ymax - ymin
+            # TQDM
+            print('Speed: {total:.2f} FPS | Num Poses: {pose} | Det time1, 2, 3: {det:.3f}, '.format(
+                total=1 / (time.time() - start_time),
+                pose=len(result['result']),
+                det=det_time1)
+                  +
+                  '{det2:.3f}, {det3:.3f}'.format(
+                      det2=det_time2 - det_time1,
+                      det3=det_time3 - det_time2)
+            )
 
-            feature_list = list()
+            rep = self.svm_predict(keyposes, scores, bboxes)
+            return rep, bboxes
 
-            for i in range(len(keyposes)):
-                width = widths[i]
-                height = heights[i]
+if __name__ == '__main__':
+    from PIL import Image
+    image_location = 'examples/demo/1.jpg'
+    image = Image.open(image_location)
 
-                feature = np.array([])
+    if image.mode == 'L':
+        image = imagel.convert('RGB')
 
-                # normalize it
-                for j in range(scores[i].shape[0]):
-                    feature = np.append(feature, (keyposes[i][j][0] - xmin[i]) / width)
-                    feature = np.append(feature, (keyposes[i][j][1] - ymin[i]) / height)
-                    feature = np.append(feature, scores[i][j])
-
-                feature_list.append(feature)
-
-            feature_list = np.array(feature_list)
-
-            from sklearn.externals import joblib
-            clf = joblib.load('./models/svm/keypoint_recall.pkl')
-
-            rep = clf.predict_proba(feature_list)
-            print(rep)
-
-        # TQDM
-        print('Speed: {total:.2f} FPS | Num Poses: {pose} | Det time1, 2, 3: {det:.3f}, '.format(
-            total=1 / (time.time() - start_time),
-            pose=len(result['result']),
-            det=det_time1)
-              +
-              '{det2:.3f}, {det3:.3f}'.format(
-                  det2=det_time2 - det_time1,
-                  det3=det_time3 - det_time2)
-        )
-
-
-    #write_json(final_result, args.outputpath)
+    clf = Classifier(cuda=False)
+    rep = clf.predict(image)
+    print(rep)
