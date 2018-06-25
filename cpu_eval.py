@@ -190,10 +190,7 @@ def inference_from_image(image):
 # main function for testing
 if __name__ == '__main__':
     from PIL import Image
-    #image = Image.open('examples/demo/2.jpg')
-    image_location = '/home/king-kong/Downloads/storage/datasets/ai_challenger_dataset/ai_challenger_keypoint_train_20170902/ai_challenger_not_fight/08841929973516d175e1ce93962aa1aed5a50f9e.jpg'
     image_location = 'examples/demo/1.jpg'
-
     image = Image.open(image_location)
 
     if image.mode == 'L':
