@@ -221,6 +221,6 @@ if __name__ == '__main__':
     if image.mode == 'L':
         image = imagel.convert('RGB')
 
-    clf = Classifier(cuda=False)
+    clf = Classifier(cuda=True)
     rep = clf.predict(image)
     print(rep)
