@@ -38,6 +38,7 @@ args.dataset = 'coco'
 class Classifier():
     def __init__(self, cuda=False):
         ssd_path = './models/ssd/fpnssd512_20_trained.pth'
+        self.cuda = cuda
 
         # load for cpu
         if not cuda:
@@ -133,8 +134,12 @@ class Classifier():
             # for resizing the bounding box
             ht = inp.size(2)
             wd = inp.size(3)
-            # Human Detection
-            img = Variable(img).cpu()
+            if self.cuda:
+                # Human Detection
+                img = Variable(img).cuda()
+            else:
+                img = Variable(img).cpu()
+
             print(img.size())
             loc_preds, cls_preds = self.det_model(img)
 
@@ -152,7 +157,10 @@ class Classifier():
 
             # thnn_conv2d_forward is not implemented for type torch.HalfTensor
             # inps = Variable(inps.cpu().half(), volatile=True)
-            inps = Variable(inps.cpu())
+            if self.cuda:
+                inps = Variable(inps.cuda())
+            else:
+                inps = Variable(inps.cpu())
 
             # time for search the bbox
             det_time1 = time.time() - start_time
