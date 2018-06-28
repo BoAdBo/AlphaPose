@@ -46,7 +46,7 @@ class Classifier():
             print('Loading SSD model..')
             self.det_model = FPNSSD512(num_classes=21).cpu()
             self.det_model.load_state_dict(
-                torch.load('./models/ssd/fpnssd512_20_trained.pth',
+                torch.load(ssd_path,
                            map_location='cpu'))
 
             self.det_model.eval()
@@ -61,7 +61,7 @@ class Classifier():
             print('Loading SSD model..')
             self.det_model = FPNSSD512(num_classes=21).cuda()
             self.det_model.load_state_dict(
-                torch.load('./models/ssd/fpnssd512_20_trained.pth'))
+                torch.load(ssd_path))
 
             self.det_model.eval()
             self.box_coder = SSDBoxCoder(self.det_model)
